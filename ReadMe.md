@@ -105,5 +105,43 @@ module.exports = process.env
 
 
 
+## 四、添加路由
 
+路由：根据不同的URL和METHOD，调用不同的处理函数
+
+### 1 安装koa-router
+
+```
+npm i koa-router
+```
+
+### 2 编写路由
+
+创建`src/router`目录，编写`user.route.js`
+
+```
+const Router = require('koa-router')
+const router = new Router({ prefix: '/users' })  //路由对象初始化时增加一个前缀
+
+router.get('/', (ctx, next) => {
+    ctx.body = 'hello world'
+})
+
+module.exports = router;
+```
+
+`main.js`文件下，导入路由模块，并注册到中间件
+
+```
+const Koa = require('koa');
+const app = new Koa();
+const { APP_PORT } = require('./config/config.default')
+const router = require('./router/user.route')      //加载路由模块      
+
+app.use(router.routes())                          //注册中间件
+
+app.listen(APP_PORT, () => {
+    console.log(`server is running on http://localhost:${APP_PORT}`)
+})
+```
 

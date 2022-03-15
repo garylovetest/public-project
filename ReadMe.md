@@ -209,3 +209,49 @@ class UserController {
 module.exports = new UserController()
 ```
 
+## 六、解析body
+
+### 1 安装koa-body
+
+```
+npm i koa-body
+```
+
+### 2 注册中间件
+
+改写`app/index.js`
+
+```
+const Koa = require('koa');
+const koaBody = require('koa-body')		//导入koa-body
+const app = new Koa();
+const userRouter = require('../router/user.route')
+
+app.use(koaBody())                       //注册
+    .use(userRouter.routes())
+
+module.exports = app
+```
+
+### 3 解析请求的body
+
+```
+const { user_name, password } = ctx.request.body
+```
+
+### 4 拆分service层
+
+service层主要是做数据库处理
+
+创建`src/service/user.service.js`
+
+```
+class UserService {
+    async createUser(user_name, password) {
+        return '写入数据库成功'
+    }
+}
+
+module.exports = new UserService()
+```
+

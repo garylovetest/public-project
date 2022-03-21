@@ -1,10 +1,10 @@
 const path = require("path")
 
-const { fileUploadError, unSupportedFileType, publishGoodsError } = require('../constant/err.type')
-const { createGoods } = require('../service/goods.service')
+const { fileUploadError, unSupportedFileType, publishGoodsError, invalidGoodsID } = require('../constant/err.type')
+const { createGoods, updateGoods, removeGoods, offlineGoods, restoreGoods, findGoods } = require('../service/goods.service')
 
 class GoodsController {
-    async upload(ctx, next) {
+    async upload(ctx) {
         const { file } = ctx.request.files
         const fileTypes = ['image/jpeg', 'image/png']
         if (file) {
@@ -38,6 +38,74 @@ class GoodsController {
             console.error(err)
             ctx.app.emit('error', publishGoodsError, ctx)
             return
+        }
+    }
+
+    async update(ctx) {
+        try {
+            const res = await updateGoods(ctx.params.id, ctx.request.body)
+            if (res) {
+                ctx.body = {
+                    code: 0,
+                    message: '修改商品成功',
+                    result: ''
+                }
+            } else {
+                ctx.app.emit('error', invalidGoodsID, ctx)
+                return
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    async remove(ctx) {
+        const res = await removeGoods(ctx.params.id)
+        ctx.body = {
+            code: 0,
+            message: '删除商品成功',
+            result: ''
+        }
+    }
+
+    async offline(ctx) {
+        const res = await offlineGoods(ctx.params.id)
+        if (res) {
+            ctx.body = {
+                code: 0,
+                message: '下架商品成功',
+                result: ''
+            }
+        } else {
+            ctx.app.emit('error', invalidGoodsID, ctx)
+            return
+        }
+    }
+
+    async restore(ctx) {
+        const res = await restoreGoods(ctx.params.id)
+        if (res) {
+            ctx.body = {
+                code: 0,
+                message: '上架商品成功',
+                result: ''
+            }
+        } else {
+            ctx.app.emit('error', invalidGoodsID, ctx)
+            return
+        }
+    }
+
+    async findAll(ctx) {
+        //1、解析pageNum pageSize
+        const { pageNum = 1, pageSize = 10 } = ctx.request.query
+        //2、调用数据处理的相关方法
+        const res = await findGoods(pageNum, pageSize)
+        //3、返回结果
+        ctx.body = {
+            code: 0,
+            message: '获取商品列表成功',
+            result: res
         }
     }
 }

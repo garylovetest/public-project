@@ -1269,3 +1269,233 @@ router.post('/', auth, hasAdminPermission, validator, ctx => {
 })
 ```
 
+# 十七、修改商品
+
+`goods.router.js`下增加路由：
+
+```
+router.put('/:id', auth, hasAdminPermission, validator, update)
+```
+
+`src\controller\goods.controller.js`下增加update方法：
+
+```
+async update(ctx) {
+        try {
+            const res = await updateGoods(ctx.params.id, ctx.request.body)
+            if (res) {
+                ctx.body = {
+                    code: 0,
+                    message: '修改商品成功',
+                    result: ''
+                }
+            } else {
+                ctx.app.emit('error', invalidGoodsID, ctx)
+                return
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+```
+
+`src\service\goods.service.js`下增加updateGoods方法：
+
+```
+const Goods = require('../model/goods.model')
+
+class GoodsServoce {
+    async createGoods(goods) {
+        const res = await Goods.create(goods)
+        return res.dataValues
+    }
+
+    async updateGoods(id, goods) {
+        const res = await Goods.update(goods, { where: { id } })
+        return res[0] > 0 ? true : false
+    }
+}
+
+module.exports = new GoodsServoce()
+```
+
+# 十八、删除商品
+
+`goods.router.js`下增加路由：
+
+```
+router.delete('/:id', auth, hasAdminPermission, remove)
+```
+
+`src\controller\goods.controller.js`下增加remove方法：
+
+```
+async remove(ctx) {
+        const res = await removeGoods(ctx.params.id)
+        ctx.body = {
+            code: 0,
+            message: '删除商品成功',
+            result: ''
+        }
+    }
+```
+
+`src\service\goods.service.js`下增加removeGoods方法：
+
+```
+async removeGoods(id) {
+        const res = await Goods.destroy({ where: { id } })
+        return res[0] > 0 ? true : false
+    }
+```
+
+# 十九、下架、上架商品
+
+### 1 重新建表，增加一个字段
+
+`src\model\goods.model.js`下增加一个参数paranoid，node执行，重新创建表会增加一个deletedAt字段
+
+```
+const { DataTypes } = require('sequelize')
+
+const seq = require('../db/seq')
+
+
+const Goods = seq.define('zd_goods', {
+    goods_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '商品名称'
+    },
+    goods_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        comment: '商品价格'
+    },
+    goods_num: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: '商品库存'
+    },
+    goods_img: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '商品图片的url'
+    }
+}, {
+    paranoid: true
+})
+
+//创建完数据表后可以注释掉
+Goods.sync({ force: true })
+
+module.exports = Goods
+
+```
+
+### 2 写下方法
+
+`goods.router.js`下增加路由：
+
+```
+//软删除，重新建表增加了deletedAt字段，删除只会更新deletedAt字段
+router.post('/:id/off', auth, hasAdminPermission, offline)
+
+router.post('/:id/on', auth, hasAdminPermission, restore)
+```
+
+`src\controller\goods.controller.js`下增加offline、restore方法：
+
+```
+async offline(ctx) {
+        const res = await offlineGoods(ctx.params.id)
+        if (res) {
+            ctx.body = {
+                code: 0,
+                message: '下架商品成功',
+                result: ''
+            }
+        } else {
+            ctx.app.emit('error', invalidGoodsID, ctx)
+            return
+        }
+    }
+
+    async restore(ctx) {
+        const res = await restoreGoods(ctx.params.id)
+        if (res) {
+            ctx.body = {
+                code: 0,
+                message: '上架商品成功',
+                result: ''
+            }
+        } else {
+            ctx.app.emit('error', invalidGoodsID, ctx)
+            return
+        }
+    }
+```
+
+`src\service\goods.service.js`下增加offlineGoods、restoreGoods方法：
+
+```
+async offlineGoods(id) {
+        const res = await Goods.destroy({ where: { id } })
+        return res > 0 ? true : false
+    }
+
+    async restoreGoods(id) {
+        const res = await Goods.restore({ where: { id } })
+        return res > 0 ? true : false
+    }
+```
+
+# 二十、获取商品列表
+
+`goods.router.js`下增加路由：
+
+```
+//获取商品列表
+router.get('/', findAll)
+```
+
+`src\controller\goods.controller.js`下增加findAll方法：
+
+```
+async findAll(ctx) {
+        //1、解析pageNum pageSize
+        const { pageNum = 1, pageSize = 10 } = ctx.request.query
+        //2、调用数据处理的相关方法
+        const res = await findGoods(pageNum, pageSize)
+        //3、返回结果
+        ctx.body = {
+            code: 0,
+            message: '获取商品列表成功',
+            result: res
+        }
+    }
+```
+
+`src\service\goods.service.js`下增加findGoods方法：
+
+```
+async findGoods(pageNum, pageSize) {
+        /* //1、获取总数
+        const count = await Goods.count()        //会自动去除软删除的数据
+        //2、获取分页的数据，获取当前页的pagesize数量的记录
+        const offset = (pageNum - 1) * pageSize
+        const rows = await Goods.findAll({ offset: offset, limit: pageSize * 1 })
+         */
+
+        //或者直接用接口提供的方法：
+        const offset = (pageNum - 1) * pageSize
+        const { count, rows } = await Goods.findAndCountAll({ offset, limit: pageSize * 1 })
+        return {
+            pageNum,
+            pageSize,
+            total: count,
+            list: rows
+        }
+    }
+```
+

@@ -24,6 +24,8 @@ const Goods = seq.define('zd_goods', {
         allowNull: false,
         comment: '商品图片的url'
     }
+}, {
+    paranoid: true
 })
 
 //创建完数据表后可以注释掉
